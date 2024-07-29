@@ -28,10 +28,10 @@ import (
 	"github.com/arana-db/parser/format"
 	"github.com/pkg/errors"
 
-	"github.com/seata/seata-go/pkg/datasource/sql/types"
-	"github.com/seata/seata-go/pkg/datasource/sql/undo"
-	"github.com/seata/seata-go/pkg/util/bytes"
-	"github.com/seata/seata-go/pkg/util/log"
+	"seata.apache.org/seata-go/pkg/datasource/sql/types"
+	"seata.apache.org/seata-go/pkg/datasource/sql/undo"
+	"seata.apache.org/seata-go/pkg/util/bytes"
+	"seata.apache.org/seata-go/pkg/util/log"
 )
 
 //func init() {
@@ -158,10 +158,10 @@ func (u *MySQLMultiUpdateUndoLogBuilder) buildBeforeImageSQL(updateStmts []*ast.
 	var whereCondition strings.Builder
 	for _, updateStmt := range updateStmts {
 		if updateStmt.Limit != nil {
-			return "", nil, errors.New("multi update SQL with limit condition is not support yet")
+			return "", nil, fmt.Errorf("multi update SQL with limit condition is not support yet")
 		}
 		if updateStmt.Order != nil {
-			return "", nil, errors.New("multi update SQL with orderBy condition is not support yet")
+			return "", nil, fmt.Errorf("multi update SQL with orderBy condition is not support yet")
 		}
 
 		// todo use ONLY_CARE_UPDATE_COLUMNS to judge select all columns or not
@@ -213,7 +213,7 @@ func (u *MySQLMultiUpdateUndoLogBuilder) buildBeforeImageSQL(updateStmts []*ast.
 	}
 	fakeSelectStmt, ok := fakeNode.(*ast.SelectStmt)
 	if !ok {
-		return "", nil, errors.New("multi update fake node is not select stmt")
+		return "", nil, fmt.Errorf("multi update fake node is not select stmt")
 	}
 
 	selStmt := ast.SelectStmt{

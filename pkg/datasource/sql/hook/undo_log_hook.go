@@ -20,15 +20,15 @@ package hook
 import (
 	"context"
 
-	"github.com/seata/seata-go/pkg/datasource/sql/exec"
-	"github.com/seata/seata-go/pkg/datasource/sql/parser"
-	"github.com/seata/seata-go/pkg/datasource/sql/types"
-	"github.com/seata/seata-go/pkg/datasource/sql/undo"
-	"github.com/seata/seata-go/pkg/tm"
+	"seata.apache.org/seata-go/pkg/datasource/sql/exec"
+	"seata.apache.org/seata-go/pkg/datasource/sql/parser"
+	"seata.apache.org/seata-go/pkg/datasource/sql/types"
+	"seata.apache.org/seata-go/pkg/datasource/sql/undo"
+	"seata.apache.org/seata-go/pkg/tm"
 )
 
-func init() {
-	exec.RegisterHook(&undoLogSQLHook{})
+func NewUndoLogSQLHook() exec.SQLHook {
+	return &undoLogSQLHook{}
 }
 
 type undoLogSQLHook struct {

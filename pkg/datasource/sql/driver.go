@@ -23,15 +23,18 @@ import (
 	"database/sql/driver"
 	"errors"
 	"fmt"
+	"io"
+	"reflect"
 	"strings"
 
-	mysql2 "github.com/seata/seata-go/pkg/datasource/sql/datasource/mysql"
-
 	"github.com/go-sql-driver/mysql"
-	"github.com/seata/seata-go/pkg/datasource/sql/datasource"
-	"github.com/seata/seata-go/pkg/datasource/sql/types"
-	"github.com/seata/seata-go/pkg/protocol/branch"
-	"github.com/seata/seata-go/pkg/util/log"
+
+	"seata.apache.org/seata-go/pkg/datasource/sql/datasource"
+	mysql2 "seata.apache.org/seata-go/pkg/datasource/sql/datasource/mysql"
+	"seata.apache.org/seata-go/pkg/datasource/sql/types"
+	"seata.apache.org/seata-go/pkg/datasource/sql/util"
+	"seata.apache.org/seata-go/pkg/protocol/branch"
+	"seata.apache.org/seata-go/pkg/util/log"
 )
 
 const (
@@ -41,18 +44,20 @@ const (
 	SeataXAMySQLDriver = "seata-xa-mysql"
 )
 
-func init() {
+func initDriver() {
 	sql.Register(SeataATMySQLDriver, &seataATDriver{
 		seataDriver: &seataDriver{
-			transType: types.ATMode,
-			target:    mysql.MySQLDriver{},
+			branchType: branch.BranchTypeAT,
+			transType:  types.ATMode,
+			target:     mysql.MySQLDriver{},
 		},
 	})
 
 	sql.Register(SeataXAMySQLDriver, &seataXADriver{
 		seataDriver: &seataDriver{
-			transType: types.XAMode,
-			target:    mysql.MySQLDriver{},
+			branchType: branch.BranchTypeXA,
+			transType:  types.XAMode,
+			target:     mysql.MySQLDriver{},
 		},
 	})
 }
@@ -98,8 +103,9 @@ func (d *seataXADriver) OpenConnector(name string) (c driver.Connector, err erro
 }
 
 type seataDriver struct {
-	transType types.TransactionMode
-	target    driver.Driver
+	branchType branch.BranchType
+	transType  types.TransactionMode
+	target     driver.Driver
 }
 
 // Open never be called, because seataDriver implemented dri.DriverContext interface.
@@ -124,13 +130,41 @@ func (d *seataDriver) OpenConnector(name string) (c driver.Connector, err error)
 		return nil, fmt.Errorf("unsupport conn type %s", d.getTargetDriverName())
 	}
 
-	proxy, err := getOpenConnectorProxy(c, dbType, sql.OpenDB(c), name)
+	proxy, err := d.getOpenConnectorProxy(c, dbType, sql.OpenDB(c), name)
 	if err != nil {
 		log.Errorf("register resource: %w", err)
 		return nil, err
 	}
 
 	return proxy, nil
+}
+
+func (d *seataDriver) getOpenConnectorProxy(connector driver.Connector, dbType types.DBType,
+	db *sql.DB, dataSourceName string) (driver.Connector, error) {
+	cfg, _ := mysql.ParseDSN(dataSourceName)
+	options := []dbOption{
+		withResourceID(parseResourceID(dataSourceName)),
+		withTarget(db),
+		withBranchType(d.branchType),
+		withDBType(dbType),
+		withDBName(cfg.DBName),
+		withConnector(connector),
+	}
+	res, err := newResource(options...)
+	if err != nil {
+		log.Errorf("create new resource: %w", err)
+		return nil, err
+	}
+	datasource.RegisterTableCache(types.DBTypeMySQL, mysql2.NewTableMetaInstance(db))
+	if err = datasource.GetDataSourceManager(d.branchType).RegisterResource(res); err != nil {
+		log.Errorf("regisiter resource: %w", err)
+		return nil, err
+	}
+	return &seataConnector{
+		res:    res,
+		target: connector,
+		cfg:    cfg,
+	}, nil
 }
 
 func (d *seataDriver) getTargetDriverName() string {
@@ -150,77 +184,6 @@ func (t *dsnConnector) Driver() driver.Driver {
 	return t.driver
 }
 
-func getOpenConnectorProxy(connector driver.Connector, dbType types.DBType, db *sql.DB,
-	dataSourceName string, opts ...seataOption) (driver.Connector, error) {
-	conf := loadConfig()
-	for i := range opts {
-		opts[i](conf)
-	}
-
-	if err := conf.validate(); err != nil {
-		log.Errorf("invalid conf: %w", err)
-		return nil, err
-	}
-
-	cfg, _ := mysql.ParseDSN(dataSourceName)
-	options := []dbOption{
-		withGroupID(conf.GroupID),
-		withResourceID(parseResourceID(dataSourceName)),
-		withConf(conf),
-		withTarget(db),
-		withDBType(dbType),
-		withDBName(cfg.DBName),
-	}
-
-	res, err := newResource(options...)
-	if err != nil {
-		log.Errorf("create new resource: %w", err)
-		return nil, err
-	}
-
-	datasource.RegisterTableCache(types.DBTypeMySQL, mysql2.NewTableMetaInstance(db))
-	if err = datasource.GetDataSourceManager(conf.BranchType).RegisterResource(res); err != nil {
-		log.Errorf("regisiter resource: %w", err)
-		return nil, err
-	}
-
-	return &seataConnector{
-		res:    res,
-		target: connector,
-		conf:   conf,
-		cfg:    cfg,
-	}, nil
-}
-
-type (
-	seataOption func(cfg *seataServerConfig)
-
-	// seataServerConfig
-	seataServerConfig struct {
-		// GroupID
-		GroupID string `yaml:"groupID"`
-		// BranchType
-		BranchType branch.BranchType
-		// Endpoints
-		Endpoints []string `yaml:"endpoints" json:"endpoints"`
-	}
-)
-
-func (c *seataServerConfig) validate() error {
-	return nil
-}
-
-// loadConfig
-func loadConfig() *seataServerConfig {
-	// set default value first.
-	// todo read from configuration file.
-	return &seataServerConfig{
-		GroupID:    "DEFAULT_GROUP",
-		BranchType: branch.BranchTypeAT,
-		Endpoints:  []string{"127.0.0.1:8888"},
-	}
-}
-
 func parseResourceID(dsn string) string {
 	i := strings.Index(dsn, "?")
 	res := dsn
@@ -228,4 +191,54 @@ func parseResourceID(dsn string) string {
 		res = dsn[:i]
 	}
 	return strings.ReplaceAll(res, ",", "|")
+}
+
+func selectDBVersion(ctx context.Context, conn driver.Conn) (string, error) {
+	var rowsi driver.Rows
+	var err error
+
+	queryerCtx, ok := conn.(driver.QueryerContext)
+	var queryer driver.Queryer
+	if !ok {
+		queryer, ok = conn.(driver.Queryer)
+	}
+	if ok {
+		rowsi, err = util.CtxDriverQuery(ctx, queryerCtx, queryer, "SELECT VERSION()", nil)
+		defer func() {
+			if rowsi != nil {
+				rowsi.Close()
+			}
+		}()
+		if err != nil {
+			log.Errorf("ctx driver query: %+v", err)
+			return "", err
+		}
+	} else {
+		log.Errorf("target conn should been driver.QueryerContext or driver.Queryer")
+		return "", fmt.Errorf("invalid conn")
+	}
+
+	dest := make([]driver.Value, 1)
+	var version string
+	if err = rowsi.Next(dest); err != nil {
+		if err == io.EOF {
+			return version, nil
+		}
+		return "", err
+	}
+	if len(dest) != 1 {
+		return "", errors.New("get db version is not column 1")
+	}
+
+	switch reflect.TypeOf(dest[0]).Kind() {
+	case reflect.Slice, reflect.Array:
+		val := reflect.ValueOf(dest[0]).Bytes()
+		version = string(val)
+	case reflect.String:
+		version = reflect.ValueOf(dest[0]).String()
+	default:
+		return "", errors.New("get db version is not a string")
+	}
+
+	return version, nil
 }

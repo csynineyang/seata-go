@@ -23,17 +23,19 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/seata/seata-go/pkg/datasource/sql/datasource"
+	"github.com/agiledragon/gomonkey/v2"
 
-	"github.com/agiledragon/gomonkey"
-	"github.com/seata/seata-go/pkg/datasource/sql/datasource/mysql"
-	"github.com/seata/seata-go/pkg/datasource/sql/types"
+	"seata.apache.org/seata-go/pkg/datasource/sql/datasource"
 
-	"github.com/seata/seata-go/pkg/datasource/sql/parser"
+	"seata.apache.org/seata-go/pkg/datasource/sql/datasource/mysql"
+	"seata.apache.org/seata-go/pkg/datasource/sql/types"
+
+	"seata.apache.org/seata-go/pkg/datasource/sql/parser"
 
 	_ "github.com/arana-db/parser/test_driver"
-	_ "github.com/seata/seata-go/pkg/util/log"
 	"github.com/stretchr/testify/assert"
+
+	_ "seata.apache.org/seata-go/pkg/util/log"
 )
 
 func TestBuildSelectSQLByUpdate(t *testing.T) {

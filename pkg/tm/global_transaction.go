@@ -19,15 +19,16 @@ package tm
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
 	"github.com/pkg/errors"
 
-	"github.com/seata/seata-go/pkg/protocol/message"
-	"github.com/seata/seata-go/pkg/remoting/getty"
-	"github.com/seata/seata-go/pkg/util/backoff"
-	"github.com/seata/seata-go/pkg/util/log"
+	"seata.apache.org/seata-go/pkg/protocol/message"
+	"seata.apache.org/seata-go/pkg/remoting/getty"
+	"seata.apache.org/seata-go/pkg/util/backoff"
+	"seata.apache.org/seata-go/pkg/util/log"
 )
 
 var (
@@ -60,7 +61,7 @@ func (g *GlobalTransactionManager) Begin(ctx context.Context, timeout time.Durat
 	}
 	if res == nil || res.(message.GlobalBeginResponse).ResultCode == message.ResultCodeFailed {
 		log.Errorf("GlobalBeginRequest result is empty or result code is failed, res %v", res)
-		return errors.New("GlobalBeginRequest result is empty or result code is failed.")
+		return fmt.Errorf("GlobalBeginRequest result is empty or result code is failed.")
 	}
 	log.Infof("GlobalBeginRequest success, res %v", res)
 
@@ -75,7 +76,7 @@ func (g *GlobalTransactionManager) Commit(ctx context.Context, gtr *GlobalTransa
 		return nil
 	}
 	if gtr.Xid == "" {
-		return errors.New("Commit xid should not be empty")
+		return fmt.Errorf("Commit xid should not be empty")
 	}
 
 	bf := backoff.New(ctx, backoff.Config{
@@ -97,7 +98,7 @@ func (g *GlobalTransactionManager) Commit(ctx context.Context, gtr *GlobalTransa
 		bf.Wait()
 	}
 
-	if bf.Err() != nil {
+	if err != nil || bf.Err() != nil {
 		lastErr := errors.Wrap(err, bf.Err().Error())
 		log.Warnf("send global commit request failed, xid %s, error %v", gtr.Xid, lastErr)
 		return lastErr
@@ -116,7 +117,7 @@ func (g *GlobalTransactionManager) Rollback(ctx context.Context, gtr *GlobalTran
 		return nil
 	}
 	if gtr.Xid == "" {
-		return errors.New("Rollback xid should not be empty")
+		return fmt.Errorf("Rollback xid should not be empty")
 	}
 
 	bf := backoff.New(ctx, backoff.Config{
@@ -139,7 +140,7 @@ func (g *GlobalTransactionManager) Rollback(ctx context.Context, gtr *GlobalTran
 		bf.Wait()
 	}
 
-	if bf.Err() != nil {
+	if err != nil && bf.Err() != nil {
 		lastErr := errors.Wrap(err, bf.Err().Error())
 		log.Errorf("GlobalRollbackRequest rollback failed, xid %s, error %v", gtr.Xid, lastErr)
 		return lastErr

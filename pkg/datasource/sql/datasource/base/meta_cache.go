@@ -20,11 +20,11 @@ package base
 import (
 	"context"
 	"database/sql"
-	"errors"
+	"fmt"
 	"sync"
 	"time"
 
-	"github.com/seata/seata-go/pkg/datasource/sql/types"
+	"seata.apache.org/seata-go/pkg/datasource/sql/types"
 )
 
 type (
@@ -138,6 +138,8 @@ func (c *BaseTableMetaCache) GetTableMeta(ctx context.Context, dbName, tableName
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
+	defer conn.Close()
+
 	v, ok := c.cache[tableName]
 	if !ok {
 		meta, err := c.trigger.LoadOne(ctx, dbName, tableName, conn)
@@ -154,7 +156,7 @@ func (c *BaseTableMetaCache) GetTableMeta(ctx context.Context, dbName, tableName
 			return *meta, nil
 		}
 
-		return types.TableMeta{}, errors.New("not found table metadata")
+		return types.TableMeta{}, fmt.Errorf("not found table metadata")
 	}
 
 	v.lastAccess = time.Now()

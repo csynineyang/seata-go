@@ -22,11 +22,10 @@ import (
 	gosql "database/sql"
 	"database/sql/driver"
 
-	"github.com/seata/seata-go/pkg/util/log"
-
-	"github.com/seata/seata-go/pkg/datasource/sql/exec"
-	"github.com/seata/seata-go/pkg/datasource/sql/types"
-	"github.com/seata/seata-go/pkg/tm"
+	"seata.apache.org/seata-go/pkg/datasource/sql/exec"
+	"seata.apache.org/seata-go/pkg/datasource/sql/types"
+	"seata.apache.org/seata-go/pkg/tm"
+	"seata.apache.org/seata-go/pkg/util/log"
 )
 
 // ATConn Database connection proxy object under XA transaction model
@@ -59,10 +58,13 @@ func (c *ATConn) QueryContext(ctx context.Context, query string, args []driver.N
 		}
 
 		execCtx := &types.ExecContext{
-			TxCtx:       c.txCtx,
-			Query:       query,
-			NamedValues: args,
-			Conn:        c.targetConn,
+			TxCtx:                c.txCtx,
+			Query:                query,
+			NamedValues:          args,
+			Conn:                 c.targetConn,
+			DBName:               c.dbName,
+			IsSupportsSavepoints: true,
+			IsAutoCommit:         c.GetAutoCommit(),
 		}
 
 		return executor.ExecWithNamedValue(ctx, execCtx,
@@ -95,11 +97,13 @@ func (c *ATConn) ExecContext(ctx context.Context, query string, args []driver.Na
 		}
 
 		execCtx := &types.ExecContext{
-			TxCtx:       c.txCtx,
-			Query:       query,
-			NamedValues: args,
-			Conn:        c.targetConn,
-			DBName:      c.dbName,
+			TxCtx:                c.txCtx,
+			Query:                query,
+			NamedValues:          args,
+			Conn:                 c.targetConn,
+			DBName:               c.dbName,
+			IsSupportsSavepoints: true,
+			IsAutoCommit:         c.GetAutoCommit(),
 		}
 
 		ret, err := executor.ExecWithNamedValue(ctx, execCtx,
@@ -162,7 +166,7 @@ func (c *ATConn) createNewTxOnExecIfNeed(ctx context.Context, f func() (types.Ex
 		err error
 	)
 
-	if c.txCtx.TransactionMode != types.Local && c.autoCommit {
+	if c.txCtx.TransactionMode != types.Local && tm.IsGlobalTx(ctx) && c.autoCommit {
 		tx, err = c.BeginTx(ctx, driver.TxOptions{Isolation: driver.IsolationLevel(gosql.LevelDefault)})
 		if err != nil {
 			return nil, err
@@ -170,11 +174,13 @@ func (c *ATConn) createNewTxOnExecIfNeed(ctx context.Context, f func() (types.Ex
 	}
 	defer func() {
 		recoverErr := recover()
-		if err != nil || recoverErr != nil {
-			log.Errorf("conn at rollback  error:%v or recoverErr:%v", err, recoverErr)
+		if recoverErr != nil {
+			log.Errorf("at exec panic, recoverErr:%v", recoverErr)
 			if tx != nil {
 				rollbackErr := tx.Rollback()
-				log.Errorf("conn at rollback error:%v", rollbackErr)
+				if rollbackErr != nil {
+					log.Errorf("conn at rollback error:%v", rollbackErr)
+				}
 			}
 		}
 	}()

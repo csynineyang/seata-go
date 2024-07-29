@@ -21,10 +21,10 @@ import (
 	"context"
 	"database/sql"
 	"database/sql/driver"
-	"errors"
+	"fmt"
 	"sync"
 
-	"github.com/seata/seata-go/pkg/datasource/sql/types"
+	"seata.apache.org/seata-go/pkg/datasource/sql/types"
 )
 
 var (
@@ -84,7 +84,7 @@ func GetUndoLogManager(d types.DBType) (UndoLogManager, error) {
 	v, ok := undoLogManagerMap[d]
 
 	if !ok {
-		return nil, errors.New("not found UndoLogManager")
+		return nil, fmt.Errorf("not found UndoLogManager")
 	}
 
 	v.once.Do(func() {
@@ -161,18 +161,6 @@ func (s SQLUndoLog) SetTableMeta(tableMeta *types.TableMeta) {
 		s.AfterImage.TableMeta = tableMeta
 		s.AfterImage.TableName = tableMeta.TableName
 	}
-}
-
-// UndoLogParser
-type UndoLogParser interface {
-	// GetName
-	GetName() string
-	// GetDefaultContent
-	GetDefaultContent() []byte
-	// Encode
-	Encode(l BranchUndoLog) []byte
-	// Decode
-	Decode(b []byte) BranchUndoLog
 }
 
 type UndoLogBuilder interface {

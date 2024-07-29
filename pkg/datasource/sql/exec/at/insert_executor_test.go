@@ -23,17 +23,18 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/agiledragon/gomonkey"
+	"github.com/agiledragon/gomonkey/v2"
 	"github.com/arana-db/parser/ast"
 	"github.com/arana-db/parser/model"
 	"github.com/arana-db/parser/test_driver"
-	"github.com/seata/seata-go/pkg/datasource/sql/datasource"
-	"github.com/seata/seata-go/pkg/datasource/sql/datasource/mysql"
-	"github.com/seata/seata-go/pkg/datasource/sql/exec"
-	"github.com/seata/seata-go/pkg/datasource/sql/parser"
-	"github.com/seata/seata-go/pkg/datasource/sql/types"
-	"github.com/seata/seata-go/pkg/datasource/sql/util"
 	"github.com/stretchr/testify/assert"
+
+	"seata.apache.org/seata-go/pkg/datasource/sql/datasource"
+	"seata.apache.org/seata-go/pkg/datasource/sql/datasource/mysql"
+	"seata.apache.org/seata-go/pkg/datasource/sql/exec"
+	"seata.apache.org/seata-go/pkg/datasource/sql/parser"
+	"seata.apache.org/seata-go/pkg/datasource/sql/types"
+	"seata.apache.org/seata-go/pkg/datasource/sql/util"
 )
 
 func TestBuildSelectSQLByInsert(t *testing.T) {
@@ -297,7 +298,7 @@ func TestMySQLInsertUndoLogBuilder_containPK(t *testing.T) {
 			executor.(*insertExecutor).businesSQLResult = tt.fields.InsertResult
 			executor.(*insertExecutor).incrementStep = tt.fields.IncrementStep
 
-			assert.Equalf(t, tt.want, executor.(*insertExecutor).containPK(tt.args.columnName, tt.args.meta), "containPK(%v, %v)", tt.args.columnName, tt.args.meta)
+			assert.Equalf(t, tt.want, executor.(*insertExecutor).containPK(tt.args.columnName, tt.args.meta), "isPKColumn(%v, %v)", tt.args.columnName, tt.args.meta)
 		})
 	}
 }
@@ -407,22 +408,25 @@ func TestMySQLInsertUndoLogBuilder_getPkIndex(t *testing.T) {
 					},
 				},
 			},
-			meta: types.TableMeta{}}, want: map[string]int{}},
+			meta: types.TableMeta{},
+		}, want: map[string]int{}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			executor := NewInsertExecutor(nil, &types.ExecContext{}, []exec.SQLHook{})
 			executor.(*insertExecutor).businesSQLResult = tt.fields.InsertResult
 			executor.(*insertExecutor).incrementStep = tt.fields.IncrementStep
-			assert.Equalf(t, tt.want, executor.(*insertExecutor).getPkIndex(tt.args.InsertStmt, tt.args.meta), "getPkIndex(%v, %v)", tt.args.InsertStmt, tt.args.meta)
+			assert.Equalf(t, tt.want, executor.(*insertExecutor).getPkIndex(tt.args.InsertStmt, tt.args.meta), "getPkIndexArray(%v, %v)", tt.args.InsertStmt, tt.args.meta)
 		})
 	}
 }
+
 func genIntDatum(id int64) test_driver.Datum {
 	tmp := test_driver.Datum{}
 	tmp.SetInt64(id)
 	return tmp
 }
+
 func genStrDatum(str string) test_driver.Datum {
 	tmp := test_driver.Datum{}
 	tmp.SetBytesAsString([]byte(str))
@@ -455,11 +459,12 @@ func TestMySQLInsertUndoLogBuilder_parsePkValuesFromStatement(t *testing.T) {
 							Name: model.CIStr{O: "id", L: "id"},
 						},
 					},
-					Lists: [][]ast.ExprNode{{
-						&test_driver.ValueExpr{
-							Datum: genIntDatum(1),
+					Lists: [][]ast.ExprNode{
+						{
+							&test_driver.ValueExpr{
+								Datum: genIntDatum(1),
+							},
 						},
-					},
 					},
 				},
 				meta: types.TableMeta{
@@ -503,11 +508,12 @@ func TestMySQLInsertUndoLogBuilder_parsePkValuesFromStatement(t *testing.T) {
 							Name: model.CIStr{O: "id", L: "id"},
 						},
 					},
-					Lists: [][]ast.ExprNode{{
-						&test_driver.ValueExpr{
-							Datum: genStrDatum("?"),
+					Lists: [][]ast.ExprNode{
+						{
+							&test_driver.ValueExpr{
+								Datum: genStrDatum("?"),
+							},
 						},
-					},
 					},
 				},
 				meta: types.TableMeta{
@@ -605,15 +611,17 @@ func TestMySQLInsertUndoLogBuilder_getPkValuesByColumn(t *testing.T) {
 									Name: model.CIStr{O: "id", L: "id"},
 								},
 							},
-							Lists: [][]ast.ExprNode{{
-								&test_driver.ValueExpr{
-									Datum: genIntDatum(1),
+							Lists: [][]ast.ExprNode{
+								{
+									&test_driver.ValueExpr{
+										Datum: genIntDatum(1),
+									},
 								},
-							},
 							},
 						},
 					},
-				}},
+				},
+			},
 			want: map[string][]interface{}{
 				"id": {int64(1)},
 			},
@@ -705,15 +713,17 @@ func TestMySQLInsertUndoLogBuilder_getPkValuesByAuto(t *testing.T) {
 									Name: model.CIStr{O: "name", L: "name"},
 								},
 							},
-							Lists: [][]ast.ExprNode{{
-								&test_driver.ValueExpr{
-									Datum: genStrDatum("Tom"),
+							Lists: [][]ast.ExprNode{
+								{
+									&test_driver.ValueExpr{
+										Datum: genStrDatum("Tom"),
+									},
 								},
-							},
 							},
 						},
 					},
-				}},
+				},
+			},
 			want: map[string][]interface{}{
 				"id": {int64(100)},
 			},
@@ -795,11 +805,12 @@ func TestMySQLInsertUndoLogBuilder_autoGeneratePks(t *testing.T) {
 								Name: model.CIStr{O: "id", L: "id"},
 							},
 						},
-						Lists: [][]ast.ExprNode{{
-							&test_driver.ValueExpr{
-								Datum: genIntDatum(1),
+						Lists: [][]ast.ExprNode{
+							{
+								&test_driver.ValueExpr{
+									Datum: genIntDatum(1),
+								},
 							},
-						},
 						},
 					},
 				},

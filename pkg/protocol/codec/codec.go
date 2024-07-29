@@ -21,9 +21,10 @@ import (
 	"bytes"
 	"sync"
 
-	"github.com/seata/seata-go/pkg/protocol/message"
-	"github.com/seata/seata-go/pkg/util/log"
 	"vimagination.zapto.org/byteio"
+
+	"seata.apache.org/seata-go/pkg/protocol/message"
+	"seata.apache.org/seata-go/pkg/util/log"
 )
 
 type CodecType byte
@@ -118,6 +119,8 @@ func Init() {
 	GetCodecManager().RegisterCodec(CodecTypeSeata, &GlobalBeginResponseCodec{})
 	GetCodecManager().RegisterCodec(CodecTypeSeata, &GlobalCommitRequestCodec{})
 	GetCodecManager().RegisterCodec(CodecTypeSeata, &GlobalCommitResponseCodec{})
+	GetCodecManager().RegisterCodec(CodecTypeSeata, &GlobalLockQueryRequestCodec{})
+	GetCodecManager().RegisterCodec(CodecTypeSeata, &GlobalLockQueryResponseCodec{})
 	GetCodecManager().RegisterCodec(CodecTypeSeata, &GlobalRollbackRequestCodec{})
 	GetCodecManager().RegisterCodec(CodecTypeSeata, &GlobalRollbackResponseCodec{})
 	GetCodecManager().RegisterCodec(CodecTypeSeata, &GlobalStatusRequestCodec{})

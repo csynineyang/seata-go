@@ -21,31 +21,17 @@ import (
 	"context"
 	"database/sql/driver"
 
-	"github.com/seata/seata-go/pkg/datasource/sql/parser"
-	"github.com/seata/seata-go/pkg/datasource/sql/types"
-	"github.com/seata/seata-go/pkg/datasource/sql/undo"
-	"github.com/seata/seata-go/pkg/datasource/sql/undo/builder"
+	"seata.apache.org/seata-go/pkg/datasource/sql/parser"
+	"seata.apache.org/seata-go/pkg/datasource/sql/types"
 )
-
-func init() {
-	undo.RegisterUndoLogBuilder(types.MultiExecutor, builder.GetMySQLMultiUndoLogBuilder)
-}
 
 var (
 	atExecutors = make(map[types.DBType]func() SQLExecutor)
-	xaExecutors = make(map[types.DBType]func() SQLExecutor)
 )
 
 // RegisterATExecutor AT executor
 func RegisterATExecutor(dt types.DBType, builder func() SQLExecutor) {
 	atExecutors[dt] = builder
-}
-
-// RegisterXAExecutor XA executor
-func RegisterXAExecutor(dt types.DBType, builder func() SQLExecutor) {
-	xaExecutors[dt] = func() SQLExecutor {
-		return builder()
-	}
 }
 
 type (
@@ -72,12 +58,6 @@ func BuildExecutor(dbType types.DBType, transactionMode types.TransactionMode, q
 	hooks = append(hooks, commonHook...)
 	hooks = append(hooks, hookSolts[parseContext.SQLType]...)
 
-	if transactionMode == types.XAMode {
-		e := xaExecutors[dbType]()
-		e.Interceptors(hooks)
-		return e, nil
-	}
-
 	e := atExecutors[dbType]()
 	e.Interceptors(hooks)
 	return e, nil
@@ -88,12 +68,10 @@ type BaseExecutor struct {
 	ex    SQLExecutor
 }
 
-// Interceptors
 func (e *BaseExecutor) Interceptors(interceptors []SQLHook) {
 	e.hooks = interceptors
 }
 
-// ExecWithNamedValue
 func (e *BaseExecutor) ExecWithNamedValue(ctx context.Context, execCtx *types.ExecContext, f CallbackWithNamedValue) (types.ExecResult, error) {
 	for i := range e.hooks {
 		e.hooks[i].Before(ctx, execCtx)

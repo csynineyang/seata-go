@@ -20,13 +20,9 @@ package builder
 import (
 	"context"
 
-	"github.com/seata/seata-go/pkg/datasource/sql/types"
-	"github.com/seata/seata-go/pkg/datasource/sql/undo"
+	"seata.apache.org/seata-go/pkg/datasource/sql/types"
+	"seata.apache.org/seata-go/pkg/datasource/sql/undo"
 )
-
-func init() {
-	undo.RegisterUndoLogBuilder(types.MultiExecutor, GetMySQLMultiUndoLogBuilder)
-}
 
 type MySQLMultiUndoLogBuilder struct {
 	BasicUndoLogBuilder

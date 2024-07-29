@@ -26,22 +26,19 @@ import (
 	"github.com/arana-db/parser/ast"
 	"github.com/arana-db/parser/format"
 	"github.com/arana-db/parser/model"
-	"github.com/seata/seata-go/pkg/datasource/sql/datasource"
 
-	"github.com/seata/seata-go/pkg/datasource/sql/types"
-	"github.com/seata/seata-go/pkg/datasource/sql/undo"
-	"github.com/seata/seata-go/pkg/util/bytes"
-	"github.com/seata/seata-go/pkg/util/log"
+	"seata.apache.org/seata-go/pkg/datasource/sql/datasource"
+
+	"seata.apache.org/seata-go/pkg/datasource/sql/types"
+	"seata.apache.org/seata-go/pkg/datasource/sql/undo"
+	"seata.apache.org/seata-go/pkg/util/bytes"
+	"seata.apache.org/seata-go/pkg/util/log"
 )
 
 const (
 	maxInSize             = 1000
 	OnlyCareUpdateColumns = true
 )
-
-func init() {
-	undo.RegisterUndoLogBuilder(types.UpdateExecutor, GetMySQLUpdateUndoLogBuilder)
-}
 
 type MySQLUpdateUndoLogBuilder struct {
 	BasicUndoLogBuilder
@@ -71,7 +68,7 @@ func (u *MySQLUpdateUndoLogBuilder) BeforeImage(ctx context.Context, execCtx *ty
 		return nil, err
 	}
 
-	tableName, _ := execCtx.ParseContext.GteTableName()
+	tableName, _ := execCtx.ParseContext.GetTableName()
 	metaData, err := datasource.GetTableCache(types.DBTypeMySQL).GetTableMeta(ctx, execCtx.DBName, tableName)
 	if err != nil {
 		return nil, err
@@ -118,7 +115,7 @@ func (u *MySQLUpdateUndoLogBuilder) AfterImage(ctx context.Context, execCtx *typ
 		beforeImage = beforeImages[0]
 	}
 
-	tableName, _ := execCtx.ParseContext.GteTableName()
+	tableName, _ := execCtx.ParseContext.GetTableName()
 	metaData, err := datasource.GetTableCache(types.DBTypeMySQL).GetTableMeta(ctx, execCtx.DBName, tableName)
 	if err != nil {
 		return nil, err
@@ -192,7 +189,7 @@ func (u *MySQLUpdateUndoLogBuilder) buildBeforeImageSQL(ctx context.Context, exe
 		}
 
 		// select indexes columns
-		tableName, _ := execCtx.ParseContext.GteTableName()
+		tableName, _ := execCtx.ParseContext.GetTableName()
 		metaData, err := datasource.GetTableCache(types.DBTypeMySQL).GetTableMeta(ctx, execCtx.DBName, tableName)
 		if err != nil {
 			return "", nil, err

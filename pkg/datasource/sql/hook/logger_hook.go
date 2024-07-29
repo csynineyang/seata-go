@@ -20,14 +20,16 @@ package hook
 import (
 	"context"
 
-	"github.com/seata/seata-go/pkg/datasource/sql/exec"
-	"github.com/seata/seata-go/pkg/datasource/sql/types"
-	"github.com/seata/seata-go/pkg/util/log"
+	"seata.apache.org/seata-go/pkg/datasource/sql/exec"
+
 	"go.uber.org/zap"
+
+	"seata.apache.org/seata-go/pkg/datasource/sql/types"
+	"seata.apache.org/seata-go/pkg/util/log"
 )
 
-func init() {
-	exec.RegisterHook(&loggerSQLHook{})
+func NewLoggerSQLHook() exec.SQLHook {
+	return &loggerSQLHook{}
 }
 
 type loggerSQLHook struct{}

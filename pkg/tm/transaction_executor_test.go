@@ -19,17 +19,17 @@ package tm
 
 import (
 	"context"
-	"fmt"
 	"reflect"
 	"testing"
 	"time"
 
+	"github.com/agiledragon/gomonkey/v2"
+
 	"github.com/pkg/errors"
 
-	"github.com/agiledragon/gomonkey"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/seata/seata-go/pkg/protocol/message"
+	"seata.apache.org/seata-go/pkg/protocol/message"
 )
 
 func TestTransactionExecutorBegin(t *testing.T) {
@@ -113,7 +113,7 @@ func TestTransactionExecutorBegin(t *testing.T) {
 			},
 			xid:             "123456",
 			wantHasError:    true,
-			wantErrorString: fmt.Sprintf("existing transaction found for transaction marked with pg 'never', xid = 123456"),
+			wantErrorString: "existing transaction found for transaction marked with pg 'never', xid = 123456",
 		},
 		// has not error
 		{
@@ -317,11 +317,22 @@ func TestCommitOrRollback(t *testing.T) {
 	}
 }
 
-func TestTransferTx(t *testing.T) {
+func TestClearTxConf(t *testing.T) {
 	ctx := InitSeataContext(context.Background())
-	SetXID(ctx, "123456")
-	newCtx := transferTx(ctx)
-	assert.Equal(t, GetXID(ctx), GetXID(newCtx))
+
+	SetTx(ctx, &GlobalTransaction{
+		Xid:      "123456",
+		TxName:   "MockTxName",
+		TxStatus: message.GlobalStatusBegin,
+		TxRole:   Launcher,
+	})
+
+	clearTxConf(ctx)
+
+	assert.Equal(t, "123456", GetXID(ctx))
+	assert.Equal(t, UnKnow, *GetTxRole(ctx))
+	assert.Equal(t, message.GlobalStatusUnKnown, *GetTxStatus(ctx))
+	assert.Equal(t, "", GetTxName(ctx))
 }
 
 func TestUseExistGtx(t *testing.T) {

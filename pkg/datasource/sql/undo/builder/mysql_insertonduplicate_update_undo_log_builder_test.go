@@ -23,9 +23,10 @@ import (
 
 	"database/sql/driver"
 
-	"github.com/seata/seata-go/pkg/datasource/sql/parser"
-	"github.com/seata/seata-go/pkg/datasource/sql/types"
 	"github.com/stretchr/testify/assert"
+
+	"seata.apache.org/seata-go/pkg/datasource/sql/parser"
+	"seata.apache.org/seata-go/pkg/datasource/sql/types"
 )
 
 func TestInsertOnDuplicateBuildBeforeImageSQL(t *testing.T) {

@@ -20,20 +20,20 @@ package tcc
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"sync"
 	"time"
 
 	gostnet "github.com/dubbogo/gost/net"
-	"github.com/pkg/errors"
 
-	"github.com/seata/seata-go/pkg/constant"
-	"github.com/seata/seata-go/pkg/protocol/branch"
-	"github.com/seata/seata-go/pkg/rm"
-	"github.com/seata/seata-go/pkg/rm/tcc/fence/enum"
-	"github.com/seata/seata-go/pkg/tm"
-	"github.com/seata/seata-go/pkg/util/log"
-	"github.com/seata/seata-go/pkg/util/reflectx"
+	"seata.apache.org/seata-go/pkg/constant"
+	"seata.apache.org/seata-go/pkg/protocol/branch"
+	"seata.apache.org/seata-go/pkg/rm"
+	"seata.apache.org/seata-go/pkg/rm/tcc/fence/enum"
+	"seata.apache.org/seata-go/pkg/tm"
+	"seata.apache.org/seata-go/pkg/util/log"
+	"seata.apache.org/seata-go/pkg/util/reflectx"
 )
 
 type TCCServiceProxy struct {
@@ -92,9 +92,9 @@ func (t *TCCServiceProxy) Prepare(ctx context.Context, params interface{}) (inte
 // registeBranch send register branch transaction request
 func (t *TCCServiceProxy) registeBranch(ctx context.Context, params interface{}) error {
 	if !tm.IsGlobalTx(ctx) {
-		err := errors.New("BranchRegister error, transaction should be opened")
-		log.Errorf(err.Error())
-		return err
+		errStr := "BranchRegister error, transaction should be opened"
+		log.Errorf(errStr)
+		return fmt.Errorf(errStr)
 	}
 
 	tccContext := t.initBusinessActionContext(ctx, params)

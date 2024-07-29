@@ -20,10 +20,11 @@ package codec
 import (
 	"testing"
 
-	model2 "github.com/seata/seata-go/pkg/protocol/branch"
+	model2 "seata.apache.org/seata-go/pkg/protocol/branch"
 
-	"github.com/seata/seata-go/pkg/protocol/message"
 	"github.com/stretchr/testify/assert"
+
+	"seata.apache.org/seata-go/pkg/protocol/message"
 )
 
 func TestBranchRollbackRequestCodec(t *testing.T) {

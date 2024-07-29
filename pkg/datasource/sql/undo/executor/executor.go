@@ -20,14 +20,16 @@ package executor
 import (
 	"context"
 	"database/sql"
+	"database/sql/driver"
 	"fmt"
 	"strings"
 
 	"github.com/goccy/go-json"
-	"github.com/seata/seata-go/pkg/datasource/sql/datasource"
-	"github.com/seata/seata-go/pkg/datasource/sql/types"
-	"github.com/seata/seata-go/pkg/datasource/sql/undo"
-	"github.com/seata/seata-go/pkg/util/log"
+
+	"seata.apache.org/seata-go/pkg/datasource/sql/datasource"
+	"seata.apache.org/seata-go/pkg/datasource/sql/types"
+	"seata.apache.org/seata-go/pkg/datasource/sql/undo"
+	"seata.apache.org/seata-go/pkg/util/log"
 )
 
 var _ undo.UndoExecutor = (*BaseExecutor)(nil)
@@ -114,13 +116,7 @@ func (b *BaseExecutor) queryCurrentRecords(ctx context.Context, conn *sql.Conn) 
 		return nil, nil
 	}
 
-	var rowSize int
-	for _, images := range pkValues {
-		rowSize = len(images)
-		break
-	}
-
-	where := buildWhereConditionByPKs(pkNameList, rowSize, maxInSize)
+	where := buildWhereConditionByPKs(pkNameList, len(b.undoImage.Rows), maxInSize)
 	checkSQL := fmt.Sprintf(checkSQLTemplate, b.undoImage.TableName, where)
 	params := buildPKParams(b.undoImage.Rows, pkNameList)
 
@@ -152,9 +148,13 @@ func (b *BaseExecutor) queryCurrentRecords(ctx context.Context, conn *sql.Conn) 
 
 		columns := make([]types.ColumnImage, 0)
 		for i, val := range slice {
+			actualVal := val
+			if v, ok := val.(driver.Valuer); ok {
+				actualVal, _ = v.Value()
+			}
 			columns = append(columns, types.ColumnImage{
 				ColumnName: colNames[i],
-				Value:      val,
+				Value:      actualVal,
 			})
 		}
 		rowImages = append(rowImages, types.RowImage{Columns: columns})

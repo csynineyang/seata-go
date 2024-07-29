@@ -20,7 +20,8 @@ package parser
 import (
 	aparser "github.com/arana-db/parser"
 	"github.com/arana-db/parser/ast"
-	"github.com/seata/seata-go/pkg/datasource/sql/types"
+
+	"seata.apache.org/seata-go/pkg/datasource/sql/types"
 )
 
 func DoParser(query string) (*types.ParseContext, error) {
@@ -59,8 +60,8 @@ func parseParseContext(stmtNode ast.StmtNode) *types.ParseContext {
 		if stmt.IsReplace {
 			parserCtx.ExecutorType = types.ReplaceIntoExecutor
 		}
-
 		if len(stmt.OnDuplicate) != 0 {
+			parserCtx.SQLType = types.SQLTypeInsertOnDuplicateUpdate
 			parserCtx.ExecutorType = types.InsertOnDuplicateExecutor
 		}
 	case *ast.UpdateStmt:
@@ -82,6 +83,5 @@ func parseParseContext(stmtNode ast.StmtNode) *types.ParseContext {
 		parserCtx.DeleteStmt = stmt
 		parserCtx.ExecutorType = types.DeleteExecutor
 	}
-
 	return parserCtx
 }

@@ -25,16 +25,19 @@ import (
 	"io"
 	"time"
 
+	"seata.apache.org/seata-go/pkg/tm"
+
 	"github.com/arana-db/parser/ast"
 	"github.com/arana-db/parser/format"
 	"github.com/arana-db/parser/model"
-	"github.com/seata/seata-go/pkg/datasource/sql/datasource"
-	"github.com/seata/seata-go/pkg/datasource/sql/types"
-	"github.com/seata/seata-go/pkg/datasource/sql/undo/builder"
-	"github.com/seata/seata-go/pkg/protocol/branch"
-	"github.com/seata/seata-go/pkg/rm"
-	seatabytes "github.com/seata/seata-go/pkg/util/bytes"
-	"github.com/seata/seata-go/pkg/util/log"
+
+	"seata.apache.org/seata-go/pkg/datasource/sql/datasource"
+	"seata.apache.org/seata-go/pkg/datasource/sql/types"
+	"seata.apache.org/seata-go/pkg/datasource/sql/undo/builder"
+	"seata.apache.org/seata-go/pkg/protocol/branch"
+	"seata.apache.org/seata-go/pkg/rm"
+	seatabytes "seata.apache.org/seata-go/pkg/util/bytes"
+	"seata.apache.org/seata-go/pkg/util/log"
 )
 
 const (
@@ -51,7 +54,7 @@ func (s SelectForUpdateExecutor) interceptors(interceptors []SQLHook) {
 }
 
 func (s SelectForUpdateExecutor) ExecWithNamedValue(ctx context.Context, execCtx *types.ExecContext, f CallbackWithNamedValue) (types.ExecResult, error) {
-	if !execCtx.IsInGlobalTransaction && !execCtx.IsRequireGlobalLock {
+	if !tm.IsGlobalTx(ctx) && !execCtx.IsRequireGlobalLock {
 		return f(ctx, execCtx.Query, execCtx.NamedValues)
 	}
 
@@ -63,7 +66,7 @@ func (s SelectForUpdateExecutor) ExecWithNamedValue(ctx context.Context, execCtx
 		originalAutoCommit = execCtx.IsAutoCommit
 	)
 
-	table, err := execCtx.ParseContext.GteTableName()
+	table, err := execCtx.ParseContext.GetTableName()
 	if err != nil {
 		return nil, err
 	}
@@ -165,7 +168,7 @@ func (s SelectForUpdateExecutor) ExecWithNamedValue(ctx context.Context, execCtx
 }
 
 func (s SelectForUpdateExecutor) ExecWithValue(ctx context.Context, execCtx *types.ExecContext, f CallbackWithValue) (types.ExecResult, error) {
-	if !execCtx.IsInGlobalTransaction && !execCtx.IsRequireGlobalLock {
+	if !tm.IsGlobalTx(ctx) && !execCtx.IsRequireGlobalLock {
 		return f(ctx, execCtx.Query, execCtx.Values)
 	}
 
@@ -177,7 +180,7 @@ func (s SelectForUpdateExecutor) ExecWithValue(ctx context.Context, execCtx *typ
 		originalAutoCommit = execCtx.IsAutoCommit
 	)
 
-	table, err := execCtx.ParseContext.GteTableName()
+	table, err := execCtx.ParseContext.GetTableName()
 	if err != nil {
 		return nil, err
 	}

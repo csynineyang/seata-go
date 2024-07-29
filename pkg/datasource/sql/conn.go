@@ -21,9 +21,9 @@ import (
 	"context"
 	"database/sql/driver"
 
-	"github.com/seata/seata-go/pkg/datasource/sql/exec"
-	"github.com/seata/seata-go/pkg/datasource/sql/types"
-	"github.com/seata/seata-go/pkg/datasource/sql/util"
+	"seata.apache.org/seata-go/pkg/datasource/sql/exec"
+	"seata.apache.org/seata-go/pkg/datasource/sql/types"
+	"seata.apache.org/seata-go/pkg/datasource/sql/util"
 )
 
 // Conn is a connection to a database. It is not used concurrently
@@ -211,7 +211,14 @@ func (c *Conn) Begin() (driver.Tx, error) {
 //
 //	global transaction according to tranCtx. If so, it needs to be included in the transaction management of seata
 func (c *Conn) BeginTx(ctx context.Context, opts driver.TxOptions) (driver.Tx, error) {
-	c.autoCommit = false
+	if c.txCtx.TransactionMode == types.XAMode {
+		c.autoCommit = false
+		return newTx(
+			withDriverConn(c),
+			withTxCtx(c.txCtx),
+			withOriginTx(nil),
+		)
+	}
 
 	if conn, ok := c.targetConn.(driver.ConnBeginTx); ok {
 		tx, err := conn.BeginTx(ctx, opts)
@@ -235,6 +242,10 @@ func (c *Conn) BeginTx(ctx context.Context, opts driver.TxOptions) (driver.Tx, e
 		withTxCtx(c.txCtx),
 		withOriginTx(txi),
 	)
+}
+
+func (c *Conn) GetAutoCommit() bool {
+	return c.autoCommit
 }
 
 // Close invalidates and potentially stops any current

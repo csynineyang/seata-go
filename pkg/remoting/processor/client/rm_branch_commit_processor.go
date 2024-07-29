@@ -20,11 +20,11 @@ package client
 import (
 	"context"
 
-	"github.com/seata/seata-go/pkg/protocol/message"
-	"github.com/seata/seata-go/pkg/util/log"
+	"seata.apache.org/seata-go/pkg/protocol/message"
+	"seata.apache.org/seata-go/pkg/util/log"
 
-	"github.com/seata/seata-go/pkg/remoting/getty"
-	"github.com/seata/seata-go/pkg/rm"
+	"seata.apache.org/seata-go/pkg/remoting/getty"
+	"seata.apache.org/seata-go/pkg/rm"
 )
 
 func initBranchCommit() {
@@ -41,7 +41,7 @@ func (f *rmBranchCommitProcessor) Process(ctx context.Context, rpcMessage messag
 	branchID := request.BranchId
 	resourceID := request.ResourceId
 	applicationData := request.ApplicationData
-	log.Infof("Branch committing: xid %s, branchID %s, resourceID %s, applicationData %s", xid, branchID, resourceID, applicationData)
+	log.Infof("Branch committing: xid %s, branchID %d, resourceID %s, applicationData %s", xid, branchID, resourceID, applicationData)
 	branchResource := rm.BranchResource{
 		ResourceId:      resourceID,
 		BranchId:        branchID,
@@ -54,7 +54,7 @@ func (f *rmBranchCommitProcessor) Process(ctx context.Context, rpcMessage messag
 		log.Errorf("branch commit error: %s", err.Error())
 		return err
 	}
-	log.Infof("branch commit success: xid %s, branchID %s, resourceID %s, applicationData %s", xid, branchID, resourceID, applicationData)
+	log.Infof("branch commit success: xid %s, branchID %d, resourceID %s, applicationData %s", xid, branchID, resourceID, applicationData)
 
 	var (
 		resultCode message.ResultCode

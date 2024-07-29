@@ -22,9 +22,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/seata/seata-go/pkg/protocol/branch"
-
 	"github.com/google/uuid"
+
+	"seata.apache.org/seata-go/pkg/protocol/branch"
 )
 
 type DBType int16
@@ -76,6 +76,7 @@ const (
 	DBTypePostgreSQL
 	DBTypeSQLServer
 	DBTypeOracle
+	DBTypeMARIADB
 
 	BranchPhase_Unknown = 0
 	BranchPhase_Done    = 1
@@ -159,10 +160,9 @@ type ExecContext struct {
 	DBName      string
 	DBType      DBType
 	// todo set values for these 4 param
-	IsAutoCommit          bool
-	IsSupportsSavepoints  bool
-	IsInGlobalTransaction bool
-	IsRequireGlobalLock   bool
+	IsAutoCommit         bool
+	IsSupportsSavepoints bool
+	IsRequireGlobalLock  bool
 }
 
 func NewTxCtx() *TransactionContext {

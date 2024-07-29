@@ -18,9 +18,9 @@
 package types
 
 import (
+	"fmt"
 	"reflect"
-
-	"github.com/pkg/errors"
+	"sort"
 )
 
 // ColumnMeta
@@ -120,6 +120,15 @@ func (m TableMeta) GetPrimaryKeyOnlyName() []string {
 			}
 		}
 	}
+
+	// need sort again according the m.ColumnNames
+	order := make(map[string]int, len(m.ColumnNames))
+	for i, name := range m.ColumnNames {
+		order[name] = i
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		return order[keys[i]] < order[keys[j]]
+	})
 	return keys
 }
 
@@ -132,7 +141,7 @@ func (m TableMeta) GetPrimaryKeyType() (int32, error) {
 			}
 		}
 	}
-	return 0, errors.New("get primary key type error")
+	return 0, fmt.Errorf("get primary key type error")
 }
 
 // GetPrimaryKeyTypeStrMap get all PK type to map
@@ -146,7 +155,7 @@ func (m TableMeta) GetPrimaryKeyTypeStrMap() (map[string]string, error) {
 		}
 	}
 	if len(pkMap) == 0 {
-		return nil, errors.New("get primary key type error")
+		return nil, fmt.Errorf("get primary key type error")
 	}
 	return pkMap, nil
 }

@@ -24,8 +24,9 @@ import (
 
 	getty "github.com/apache/dubbo-getty"
 
-	"github.com/seata/seata-go/pkg/protocol/message"
-	"github.com/seata/seata-go/pkg/util/log"
+	"seata.apache.org/seata-go/pkg/protocol/message"
+	"seata.apache.org/seata-go/pkg/remoting/rpc"
+	"seata.apache.org/seata-go/pkg/util/log"
 )
 
 const (
@@ -59,16 +60,28 @@ func GetGettyRemotingInstance() *GettyRemoting {
 
 func (g *GettyRemoting) SendSync(msg message.RpcMessage, s getty.Session, callback callbackMethod) (interface{}, error) {
 	if s == nil {
-		s = sessionManager.selectSession()
+		s = sessionManager.selectSession(msg)
 	}
-	return g.sendAsync(s, msg, callback)
+	rpc.BeginCount(s.RemoteAddr())
+	result, err := g.sendAsync(s, msg, callback)
+	rpc.EndCount(s.RemoteAddr())
+	if err != nil {
+		log.Errorf("send message: %#v, session: %s", msg, s.Stat())
+		return nil, err
+	}
+	return result, err
 }
 
 func (g *GettyRemoting) SendASync(msg message.RpcMessage, s getty.Session, callback callbackMethod) error {
 	if s == nil {
-		s = sessionManager.selectSession()
+		s = sessionManager.selectSession(msg)
 	}
+	rpc.BeginCount(s.RemoteAddr())
 	_, err := g.sendAsync(s, msg, callback)
+	rpc.EndCount(s.RemoteAddr())
+	if err != nil {
+		log.Errorf("send message: %#v, session: %s", msg, s.Stat())
+	}
 	return err
 }
 

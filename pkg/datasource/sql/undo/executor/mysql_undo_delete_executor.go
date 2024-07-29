@@ -23,10 +23,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/pkg/errors"
-
-	"github.com/seata/seata-go/pkg/datasource/sql/types"
-	"github.com/seata/seata-go/pkg/datasource/sql/undo"
+	"seata.apache.org/seata-go/pkg/datasource/sql/types"
+	"seata.apache.org/seata-go/pkg/datasource/sql/undo"
 )
 
 type mySQLUndoDeleteExecutor struct {
@@ -82,7 +80,7 @@ func (m *mySQLUndoDeleteExecutor) buildUndoSQL(dbType types.DBType) (string, err
 	beforeImage := m.sqlUndoLog.BeforeImage
 	rows := beforeImage.Rows
 	if len(rows) == 0 {
-		return "", errors.New("invalid undo log")
+		return "", fmt.Errorf("invalid undo log")
 	}
 
 	row := rows[0]

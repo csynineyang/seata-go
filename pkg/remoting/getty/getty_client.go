@@ -18,14 +18,15 @@
 package getty
 
 import (
+	"fmt"
 	"sync"
 
 	gxtime "github.com/dubbogo/gost/time"
-	"github.com/pkg/errors"
-	"github.com/seata/seata-go/pkg/protocol/codec"
-	"github.com/seata/seata-go/pkg/protocol/message"
-	"github.com/seata/seata-go/pkg/util/log"
 	"go.uber.org/atomic"
+
+	"seata.apache.org/seata-go/pkg/protocol/codec"
+	"seata.apache.org/seata-go/pkg/protocol/message"
+	"seata.apache.org/seata-go/pkg/util/log"
 )
 
 var (
@@ -97,7 +98,7 @@ func (g *GettyRemotingClient) syncCallback(reqMsg message.RpcMessage, respMsg *m
 	case <-gxtime.GetDefaultTimerWheel().After(RpcRequestTimeout):
 		GetGettyRemotingInstance().RemoveMergedMessageFuture(reqMsg.ID)
 		log.Errorf("wait resp timeout: %#v", reqMsg)
-		return nil, errors.Errorf("wait response timeout, request: %#v", reqMsg)
+		return nil, fmt.Errorf("wait response timeout, request: %#v", reqMsg)
 	case <-respMsg.Done:
 		return respMsg.Response, respMsg.Err
 	}

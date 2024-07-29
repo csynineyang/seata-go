@@ -28,16 +28,18 @@ import (
 	sync "sync"
 
 	gomock "github.com/golang/mock/gomock"
-	datasource "github.com/seata/seata-go/pkg/datasource/sql/datasource"
-	types "github.com/seata/seata-go/pkg/datasource/sql/types"
-	branch "github.com/seata/seata-go/pkg/protocol/branch"
-	rm "github.com/seata/seata-go/pkg/rm"
+
+	datasource "seata.apache.org/seata-go/pkg/datasource/sql/datasource"
+	types "seata.apache.org/seata-go/pkg/datasource/sql/types"
+	branch "seata.apache.org/seata-go/pkg/protocol/branch"
+	rm "seata.apache.org/seata-go/pkg/rm"
 )
 
 // MockDataSourceManager is a mock of DataSourceManager interface.
 type MockDataSourceManager struct {
-	ctrl     *gomock.Controller
-	recorder *MockDataSourceManagerMockRecorder
+	ctrl       *gomock.Controller
+	recorder   *MockDataSourceManagerMockRecorder
+	branchType branch.BranchType
 }
 
 // MockDataSourceManagerMockRecorder is the mock recorder for MockDataSourceManager.
@@ -131,9 +133,13 @@ func (mr *MockDataSourceManagerMockRecorder) CreateTableMetaCache(ctx, resID, db
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateTableMetaCache", reflect.TypeOf((*MockDataSourceManager)(nil).CreateTableMetaCache), ctx, resID, dbType, db)
 }
 
+func (m *MockDataSourceManager) SetBranchType(branchType branch.BranchType) {
+	m.branchType = branchType
+}
+
 // GetBranchType mocks base method.
 func (m *MockDataSourceManager) GetBranchType() branch.BranchType {
-	return branch.BranchTypeAT
+	return m.branchType
 }
 
 // GetBranchType indicates an expected call of GetBranchType.

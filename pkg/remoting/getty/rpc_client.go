@@ -21,26 +21,26 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net"
-	"strings"
 	"sync"
-
-	"github.com/seata/seata-go/pkg/protocol/codec"
-	"github.com/seata/seata-go/pkg/util/log"
 
 	getty "github.com/apache/dubbo-getty"
 	gxsync "github.com/dubbogo/gost/sync"
-	"github.com/pkg/errors"
+
+	"seata.apache.org/seata-go/pkg/discovery"
+	"seata.apache.org/seata-go/pkg/protocol/codec"
+	"seata.apache.org/seata-go/pkg/remoting/config"
+	"seata.apache.org/seata-go/pkg/util/log"
 )
 
 type RpcClient struct {
-	gettyConf    *Config
-	seataConf    *SeataConfig
+	gettyConf    *config.Config
+	seataConf    *config.SeataConfig
 	gettyClients []getty.Client
 	futures      *sync.Map
 }
 
-func InitRpcClient(gettyConfig *Config, seataConfig *SeataConfig) {
-	iniConfig(seataConfig)
+func InitRpcClient(gettyConfig *config.Config, seataConfig *config.SeataConfig) {
+	config.IniConfig(seataConfig)
 	rpcClient := &RpcClient{
 		gettyConf:    gettyConfig,
 		seataConf:    seataConfig,
@@ -57,7 +57,7 @@ func (c *RpcClient) init() {
 	}
 	for _, address := range addressList {
 		gettyClient := getty.NewTCPClient(
-			getty.WithServerAddress(address),
+			getty.WithServerAddress(fmt.Sprintf("%s:%d", address.Addr, address.Port)),
 			// todo if read c.gettyConf.ConnectionNum, will cause the connect to fail
 			getty.WithConnectionNumber(1),
 			getty.WithReconnectInterval(c.gettyConf.ReconnectInterval),
@@ -68,21 +68,13 @@ func (c *RpcClient) init() {
 	}
 }
 
-func (c *RpcClient) getAvailServerList() []string {
-	defaultAddressList := []string{"127.0.0.1:8091"}
-	txServiceGroup := c.seataConf.TxServiceGroup
-	if txServiceGroup == "" {
-		return defaultAddressList
+func (c *RpcClient) getAvailServerList() []*discovery.ServiceInstance {
+	registryService := discovery.GetRegistry()
+	instances, err := registryService.Lookup(c.seataConf.TxServiceGroup)
+	if err != nil {
+		return nil
 	}
-	clusterName := c.seataConf.ServiceVgroupMapping[txServiceGroup]
-	if clusterName == "" {
-		return defaultAddressList
-	}
-	grouplist := c.seataConf.ServiceGrouplist[clusterName]
-	if grouplist == "" {
-		return defaultAddressList
-	}
-	return strings.Split(grouplist, ",")
+	return instances
 }
 
 func (c *RpcClient) newSession(session getty.Session) error {
@@ -106,7 +98,7 @@ func (c *RpcClient) newSession(session getty.Session) error {
 
 	if _, ok = session.Conn().(*tls.Conn); !ok {
 		if tcpConn, ok = session.Conn().(*net.TCPConn); !ok {
-			return errors.New(fmt.Sprintf("%s, session.conn{%#v} is not tcp connection", session.Stat(), session.Conn()))
+			return fmt.Errorf("%s, session.conn{%#v} is not tcp connection", session.Stat(), session.Conn())
 		}
 
 		if err = tcpConn.SetNoDelay(c.gettyConf.SessionConfig.TCPNoDelay); err != nil {

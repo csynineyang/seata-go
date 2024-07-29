@@ -22,7 +22,8 @@ import (
 
 	"github.com/arana-db/parser/ast"
 	"github.com/arana-db/parser/format"
-	seatabytes "github.com/seata/seata-go/pkg/util/bytes"
+
+	seatabytes "seata.apache.org/seata-go/pkg/util/bytes"
 )
 
 type ExecutorType int32
@@ -55,7 +56,7 @@ func (p *ParseContext) HasValidStmt() bool {
 	return p.InsertStmt != nil || p.UpdateStmt != nil || p.DeleteStmt != nil
 }
 
-func (p *ParseContext) GteTableName() (string, error) {
+func (p *ParseContext) GetTableName() (string, error) {
 	var table *ast.TableRefsClause
 
 	if p.InsertStmt != nil {
@@ -66,6 +67,16 @@ func (p *ParseContext) GteTableName() (string, error) {
 		table = p.UpdateStmt.TableRefs
 	} else if p.DeleteStmt != nil {
 		table = p.DeleteStmt.TableRefs
+	} else if len(p.MultiStmt) > 0 {
+		for _, parser := range p.MultiStmt {
+			tableName, err := parser.GetTableName()
+			if err != nil {
+				return "", err
+			}
+			if tableName != "" {
+				return tableName, nil
+			}
+		}
 	} else {
 		return "", fmt.Errorf("invalid stmt %v", p)
 	}
